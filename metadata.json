@@ -1,0 +1,6 @@
+{
+  "name": "Goal Finance Africa",
+  "description": "Mobile financial dashboard application with quick actions, charts, and recent activities.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
