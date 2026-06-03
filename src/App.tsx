@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import QRCode from 'react-qr-code';
 import {
   Menu, Bell, Eye, EyeOff, RefreshCw, Wallet, 
   ArrowUp, ArrowDown, ArrowLeftRight, FileText,
@@ -7,74 +8,170 @@ import {
   Copy, Check, Share, ArrowRight
 } from 'lucide-react';
 
+import { SplashScreen, Onboarding1, Onboarding2, Onboarding3, Connexion, Inscription } from './Flows';
+import { RevenusScreen, EpargneScreen, InvestissementScreen, RetraiteScreen, TransactionsScreen, ObjectifsScreen } from './SubScreens';
+import { EnvoyerModal, RetirerModal, TransfererModal, PayerFactureModal, SupportModal, CourseViewerModal } from './Modals';
+import { ClubMainApp } from './ClubApp';
+
+export function useOfflineStatus() {
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  return isOffline;
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('accueil');
+  const [screen, setScreen] = useState('splash'); // 'splash' | 'onboarding1' | 'onboarding2' | 'onboarding3' | 'connexion' | 'inscription' | 'main' | 'club_main'
+  const [subScreen, setSubScreen] = useState<string | null>(null);
+  const [modalLevel, setModalLevel] = useState<string | null>(null);
+
+  const renderContent = () => {
+      if (screen === 'splash') return <SplashScreen onComplete={() => setScreen('onboarding1')} />;
+      if (screen === 'onboarding1') return <Onboarding1 onNext={() => setScreen('onboarding2')} />;
+      if (screen === 'onboarding2') return <Onboarding2 onNext={() => setScreen('onboarding3')} />;
+      if (screen === 'onboarding3') return <Onboarding3 onNext={() => setScreen('connexion')} />;
+      if (screen === 'connexion') return <Connexion onNext={(type) => setScreen(type === 'club' ? 'club_main' : 'main')} onRegister={() => setScreen('inscription')} />;
+      if (screen === 'inscription') return <Inscription onNext={(type) => setScreen(type === 'club' ? 'club_main' : 'main')} onLogin={() => setScreen('connexion')} />;
+
+      if (subScreen) {
+          return (
+              <>
+                  <header className="px-5 py-4 flex items-center justify-between sticky top-0 z-20 bg-[#fafafa]">
+                     <button onClick={() => setSubScreen(null)} className="p-2 -ml-2 text-gray-800 hover:bg-gray-200/50 rounded-full flex items-center gap-1 font-bold text-[14px]">
+                         <ArrowLeftRight className="w-5 h-5 opacity-0 pointer-events-none" /> {/* Placeholder to center title properly */}
+                         <ArrowRight className="w-5 h-5 rotate-180 absolute" />
+                     </button>
+                     <div className="font-bold text-gray-900 capitalize text-[15px]">{subScreen.replace('_', ' ')}</div>
+                     <div className="w-8"></div>
+                  </header>
+                  <div className="flex-1 overflow-y-auto pb-8 bg-[#fafafa]">
+                      {subScreen === 'revenus' && <RevenusScreen />}
+                      {subScreen === 'epargne' && <EpargneScreen />}
+                      {subScreen === 'investissements' && <InvestissementScreen />}
+                      {subScreen === 'retraite' && <RetraiteScreen />}
+                      {subScreen === 'transactions' && <TransactionsScreen />}
+                      {subScreen === 'objectifs' && <ObjectifsScreen />}
+                  </div>
+              </>
+          );
+      }
+
+      return (
+          <>
+              {/* Header */}
+              <header className="px-5 py-4 flex items-center justify-between sticky top-0 z-20 bg-[#fafafa]">
+                  <button className="p-2 -ml-2 text-gray-800 hover:bg-gray-200/50 rounded-full">
+                    <Menu className="w-6 h-6" />
+                  </button>
+                  
+                  <div className="flex flex-col items-center">
+                      {/* Logo */}
+                      <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('accueil')}>
+                          <div className="relative w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-900 border-l-[2.5px] border-r-[2.5px] border-t-[2.5px] border-b-[2.5px]">
+                             <div className="w-1.5 h-3 bg-[#36a655] mr-1 mt-1 rounded-[1px]"></div>
+                             <div className="w-1.5 h-4.5 bg-[#36a655] rounded-[1px] transform translate-y-0.5"></div>
+                             <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#fafafa] flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[#36a655]" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                             </div>
+                          </div>
+                          <div className="flex flex-col items-start justify-center pt-0.5">
+                              <div className="text-gray-900 font-black text-[16px] tracking-tighter leading-none mb-1">
+                                  <span>GOAL</span> <span className="text-[#36a655]">FINANCE</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                 <span className="text-[7.5px] font-black tracking-widest text-gray-900 leading-none">AFRICA</span>
+                                 <span className="text-[7.5px] text-gray-500 font-medium leading-none whitespace-nowrap">Gère ton avenir. Vis ton rêve.</span>
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  <button className="relative p-2 -mr-2 text-gray-800 hover:bg-gray-200/50 rounded-full">
+                    <Bell className="w-6 h-6" />
+                    <span className="absolute top-1 right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-[#fafafa] shadow-sm">3</span>
+                  </button>
+              </header>
+
+              <div className="flex-1 overflow-y-auto pb-28">
+                  {activeTab === 'accueil' && <AccueilTab setActiveTab={setActiveTab} setSubScreen={setSubScreen} setModalLevel={setModalLevel} />}
+                  {activeTab === 'analyse' && <AnalyseTab />}
+                  {activeTab === 'formation' && <FormationTab setModalLevel={setModalLevel} />}
+                  {activeTab === 'profil' && <ProfilTab setModalLevel={setModalLevel} />}
+                  {activeTab === 'payer' && <PayerTab />}
+              </div>
+
+              {/* Bottom Navigation */}
+              <nav className="absolute bottom-0 left-0 right-0 w-full bg-white border-t border-gray-100 flex justify-between items-end px-5 pb-8 pt-3 z-50 rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.03)] sm:pb-8">
+                  <NavItem icon={<HomeIcon />} label="Accueil" active={activeTab === 'accueil'} onClick={() => setActiveTab('accueil')} />
+                  <NavItem icon={<ChartIcon />} label="Analyse" active={activeTab === 'analyse'} onClick={() => setActiveTab('analyse')} />
+                  
+                  <div className="relative -top-3 flex flex-col items-center group cursor-pointer px-2" onClick={() => setActiveTab('payer')}>
+                      <div className="w-[52px] h-[52px] bg-[#4dc46e] rounded-[18px] flex items-center justify-center text-white mb-1.5 transform transition-transform group-active:scale-95 shadow-lg shadow-[#4dc46e]/30">
+                          <QrCode className="w-7 h-7" />
+                      </div>
+                      <span className={`text-[10px] font-bold ${activeTab === 'payer' ? 'text-[#36a655]' : 'text-gray-500'}`}>Payer</span>
+                  </div>
+                  
+                  <NavItem icon={<GraduationCap className="w-6 h-6" strokeWidth={2.5} />} label="Formation" active={activeTab === 'formation'} onClick={() => setActiveTab('formation')} />
+                  <NavItem icon={<User className="w-6 h-6" strokeWidth={2.5} />} label="Profil" active={activeTab === 'profil'} onClick={() => setActiveTab('profil')} />
+              </nav>
+
+              {modalLevel === 'envoyer' && <EnvoyerModal onClose={() => setModalLevel(null)} />}
+              {modalLevel === 'retirer' && <RetirerModal onClose={() => setModalLevel(null)} />}
+              {modalLevel === 'transferer' && <TransfererModal onClose={() => setModalLevel(null)} />}
+              {modalLevel === 'payer_facture' && <PayerFactureModal onClose={() => setModalLevel(null)} />}
+              {modalLevel === 'support' && <SupportModal onClose={() => setModalLevel(null)} />}
+              {modalLevel === 'course' && <CourseViewerModal onClose={() => setModalLevel(null)} />}
+          </>
+      );
+  };
+
+  if (screen === 'club_main') {
+      return (
+          <div className="min-h-screen w-full bg-white relative z-50">
+              <ClubMainApp onLogout={() => setScreen('connexion')} />
+          </div>
+      );
+  }
 
   return (
-    <div className="max-w-[400px] w-full mx-auto bg-[#fafafa] min-h-screen relative font-sans shadow-xl overflow-x-hidden flex flex-col">
-      {/* Header */}
-      <header className="px-5 py-4 flex items-center justify-between sticky top-0 z-20 bg-[#fafafa]">
-        <button className="p-2 -ml-2 text-gray-800 hover:bg-gray-200/50 rounded-full">
-          <Menu className="w-6 h-6" />
-        </button>
-        
-        <div className="flex flex-col items-center">
-            {/* Logo */}
-            <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => setActiveTab('accueil')}>
-                <div className="relative w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-900 border-l-[2.5px] border-r-[2.5px] border-t-[2.5px] border-b-[2.5px]">
-                   <div className="w-1.5 h-3 bg-[#36a655] mr-1 mt-1 rounded-[1px]"></div>
-                   <div className="w-1.5 h-4.5 bg-[#36a655] rounded-[1px] transform translate-y-0.5"></div>
-                   <div className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-[#fafafa] flex items-center justify-center">
-                      <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[#36a655]" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                   </div>
-                </div>
-                <div className="flex flex-col items-start justify-center pt-0.5">
-                    <div className="text-gray-900 font-black text-[16px] tracking-tighter leading-none mb-1">
-                        <span>GOAL</span> <span className="text-[#36a655]">FINANCE</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                       <span className="text-[7.5px] font-black tracking-widest text-gray-900 leading-none">AFRICA</span>
-                       <span className="text-[7.5px] text-gray-500 font-medium leading-none whitespace-nowrap">Gère ton avenir. Vis ton rêve.</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <button className="relative p-2 -mr-2 text-gray-800 hover:bg-gray-200/50 rounded-full">
-          <Bell className="w-6 h-6" />
-          <span className="absolute top-1 right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center border-2 border-[#fafafa] shadow-sm">3</span>
-        </button>
-      </header>
-
-      <div className="flex-1 overflow-y-auto pb-28">
-        {activeTab === 'accueil' && <AccueilTab setActiveTab={setActiveTab} />}
-        {activeTab === 'analyse' && <AnalyseTab />}
-        {activeTab === 'formation' && <FormationTab />}
-        {activeTab === 'profil' && <ProfilTab />}
-        {activeTab === 'payer' && <PayerTab />}
-      </div>
-
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 max-w-[400px] mx-auto bg-white border-t border-gray-100 flex justify-between items-end px-5 pb-8 pt-3 z-50 rounded-t-3xl shadow-[0_-10px_20px_rgba(0,0,0,0.03)]">
-          <NavItem icon={<HomeIcon />} label="Accueil" active={activeTab === 'accueil'} onClick={() => setActiveTab('accueil')} />
-          <NavItem icon={<ChartIcon />} label="Analyse" active={activeTab === 'analyse'} onClick={() => setActiveTab('analyse')} />
-          
-          <div className="relative -top-3 flex flex-col items-center group cursor-pointer px-2" onClick={() => setActiveTab('payer')}>
-              <div className="w-[52px] h-[52px] bg-[#4dc46e] rounded-[18px] flex items-center justify-center text-white mb-1.5 transform transition-transform group-active:scale-95 shadow-lg shadow-[#4dc46e]/30">
-                  <QrCode className="w-7 h-7" />
-              </div>
-              <span className={`text-[10px] font-bold ${activeTab === 'payer' ? 'text-[#36a655]' : 'text-gray-500'}`}>Payer</span>
+    <div 
+      className="min-h-screen flex items-center justify-center sm:py-8 font-sans relative bg-gray-900 bg-cover bg-center"
+      style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1508344928928-7137b29de216?q=80&w=2000&auto=format&fit=crop")' }}
+    >
+       <div className="absolute inset-0 bg-black/60 pointer-events-none"></div>
+       <div className="w-full h-full sm:w-[400px] sm:h-[844px] bg-[#fafafa] sm:rounded-[40px] sm:shadow-2xl sm:ring-[14px] sm:ring-gray-900 relative overflow-hidden flex flex-col z-10">
+          {/* iOS status bar mockup */}
+          <div className="h-7 w-full bg-transparent absolute top-0 z-[100] hidden sm:flex justify-between items-end px-6 pb-1 pointer-events-none">
+             <div className="text-[12px] font-bold text-black mt-1">9:41</div>
+             <div className="w-32 h-6 bg-black rounded-b-3xl absolute top-0 left-1/2 -translate-x-1/2"></div>
+             <div className="flex gap-1.5 items-center mb-0.5">
+                 <div className="w-4 h-3 bg-black flex gap-[1px] items-end pb-[1px]"><div className="w-1 h-3 bg-black"></div></div>
+             </div>
           </div>
-          
-          <NavItem icon={<GraduationCap className="w-6 h-6" strokeWidth={2.5} />} label="Formation" active={activeTab === 'formation'} onClick={() => setActiveTab('formation')} />
-          <NavItem icon={<User className="w-6 h-6" strokeWidth={2.5} />} label="Profil" active={activeTab === 'profil'} onClick={() => setActiveTab('profil')} />
-      </nav>
+          {/* Content */}
+          <div className="flex-1 w-full h-full overflow-hidden flex flex-col relative pt-0 sm:pt-6">
+              {renderContent()}
+          </div>
+       </div>
     </div>
   );
 }
 
-function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
+function AccueilTab({ setActiveTab, setSubScreen, setModalLevel }: { setActiveTab: (tab: string) => void, setSubScreen: (s: string) => void, setModalLevel: (m: string | null) => void }) {
   const [showBalances, setShowBalances] = useState(true);
+  const isOffline = useOfflineStatus();
 
   const toggleBalances = async () => {
       if (typeof (DeviceMotionEvent as any) !== 'undefined' && typeof (DeviceMotionEvent as any).requestPermission === 'function') {
@@ -120,7 +217,22 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
   }, []);
 
   return (
-    <main className="px-5 space-y-6 mt-2">
+    <main className="px-5 space-y-6 mt-2 relative">
+      <AnimatePresence>
+          {isOffline && (
+            <motion.div 
+               initial={{ opacity: 0, y: -20 }}
+               animate={{ opacity: 1, y: 0 }}
+               exit={{ opacity: 0, y: -20 }}
+               className="absolute -top-3 left-0 right-0 z-50 flex justify-center pb-2 pointer-events-none"
+            >
+                <div className="bg-orange-50 border border-orange-200 text-orange-600 px-4 py-1.5 rounded-full text-[10px] font-bold flex items-center justify-center gap-1.5 shadow-sm pointer-events-auto">
+                    <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse"></span>
+                    Mode hors-ligne
+                </div>
+            </motion.div>
+          )}
+      </AnimatePresence>
       {/* Profile Section */}
       <div className="flex items-start justify-between">
           <div className="flex gap-3">
@@ -138,7 +250,7 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
                   <p className="text-gray-600 text-[11px] font-medium flex items-center mb-2 leading-none">
                       Niveau PRO • Série de 12 jours <span className="text-orange-500 text-xs shadow-none ml-1">🔥</span>
                   </p>
-                  <div className="inline-flex items-center gap-1.5 bg-green-50 text-[#36a655] px-2 py-1 rounded-full text-[9px] font-bold border border-green-100 shadow-sm">
+                  <div onClick={() => setSubScreen('revenus')} className="inline-flex items-center gap-1.5 bg-green-50 text-[#36a655] px-2 py-1 rounded-full text-[9px] font-bold border border-green-100 shadow-sm cursor-pointer">
                       <div className="w-[12px] h-[12px] rounded-full bg-[#36a655] flex items-center justify-center text-white">
                          <Plus className="w-2.5 h-2.5" strokeWidth={4} />
                       </div>
@@ -167,7 +279,13 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
       </div>
 
       {/* Balance Card */}
-      <div className="bg-gradient-to-tr from-[#36a655] to-[#51ca75] rounded-[24px] p-5 text-white shadow-lg shadow-[#45b766]/25 relative overflow-hidden">
+      <div 
+        className="rounded-[24px] p-5 text-white shadow-xl shadow-gray-200/50 relative overflow-hidden bg-gray-900 border border-gray-800"
+      >
+          {/* Background image & Overlay */}
+          <div className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-overlay" style={{backgroundImage: 'url("https://images.unsplash.com/photo-1543326168-5e82b78990be?q=80&w=800&auto=format&fit=crop")'}}></div>
+          <div className="absolute inset-0 bg-gradient-to-tr from-[#36a655]/90 to-black/80"></div>
+          
           <div className="flex justify-between items-start relative z-10">
               <div>
                   <div className="text-white/80 text-[11px] font-semibold flex items-center gap-1.5 mb-1 tracking-wider uppercase">
@@ -218,23 +336,25 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
                   icon={<div className="w-[42px] h-[42px] bg-[#36a655] rounded-full flex items-center justify-center"><ArrowUp className="w-5 h-5 text-white" strokeWidth={2.5} /></div>} 
                   label="Envoyer" 
                   sublabel="de l'argent" 
-                  onClick={() => setActiveTab('payer')}
+                  onClick={() => setModalLevel('envoyer')}
               />
               <ActionBtn 
                   icon={<div className="w-[42px] h-[42px] bg-[#3b82f6] rounded-full flex items-center justify-center"><ArrowDown className="w-5 h-5 text-white" strokeWidth={2.5} /></div>} 
                   label="Retirer" 
                   sublabel="de l'argent" 
+                  onClick={() => setModalLevel('retirer')}
               />
               <ActionBtn 
                   icon={<div className="w-[42px] h-[42px] bg-[#8b5cf6] rounded-full flex items-center justify-center"><ArrowLeftRight className="w-5 h-5 text-white" strokeWidth={2.5} /></div>} 
                   label="Transférer" 
                   sublabel="de l'argent" 
-                  onClick={() => setActiveTab('payer')}
+                  onClick={() => setModalLevel('transferer')}
               />
               <ActionBtn 
                   icon={<div className="w-[42px] h-[42px] bg-[#f59e0b] rounded-full flex items-center justify-center relative"><div className="border-[2px] border-white text-white rounded-[4px] px-[3px] py-[2px] flex items-center justify-center"><span className="text-[8px] font-black leading-none">FCFA</span></div></div>} 
                   label="Payer" 
                   sublabel="factures" 
+                  onClick={() => setModalLevel('payer_facture')}
               />
           </div>
       </div>
@@ -264,28 +384,28 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
                       </div>
                   </div>
                   <div className="flex flex-col gap-2 w-full mt-2">
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-0.5 cursor-pointer group" onClick={() => setSubScreen('revenus')}>
                           <div className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-[#36a655] flex-shrink-0"></span>
-                              <div className="text-[10px] text-gray-600 font-medium">Dépenses (70%)</div>
+                              <div className="text-[10px] text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Dépenses (70%)</div>
                           </div>
                           <div className="text-[10px] text-[#36a655] font-bold ml-[14px]">
                               <AnimatedAmount show={showBalances} amount="87 500" currency="FCFA" hiddenText="••••" />
                           </div>
                       </div>
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-0.5 cursor-pointer group" onClick={() => setSubScreen('epargne')}>
                           <div className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-[#3b82f6] flex-shrink-0"></span>
-                              <div className="text-[10px] text-gray-600 font-medium">Épargne (20%)</div>
+                              <div className="text-[10px] text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Épargne (20%)</div>
                           </div>
                           <div className="text-[10px] text-[#3b82f6] font-bold ml-[14px]">
                               <AnimatedAmount show={showBalances} amount="25 000" currency="FCFA" hiddenText="••••" />
                           </div>
                       </div>
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-0.5 cursor-pointer group" onClick={() => setSubScreen('retraite')}>
                           <div className="flex items-center gap-1.5">
                               <span className="w-2 h-2 rounded-full bg-[#8b5cf6] flex-shrink-0"></span>
-                              <div className="text-[10px] text-gray-600 font-medium">Investissement (10%)</div>
+                              <div className="text-[10px] text-gray-600 font-medium group-hover:text-gray-900 transition-colors">Investissement (10%)</div>
                           </div>
                           <div className="text-[10px] text-[#8b5cf6] font-bold ml-[14px]">
                               <AnimatedAmount show={showBalances} amount="12 500" currency="FCFA" hiddenText="••••" />
@@ -295,7 +415,7 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
               </div>
               
               <div className="flex justify-center mt-3 pt-3 border-t border-gray-50">
-                  <button className="text-[11px] text-gray-500 font-medium flex items-center">
+                  <button onClick={() => setSubScreen('epargne')} className="text-[11px] text-gray-500 font-medium flex items-center">
                       Voir plus <ChevronRight className="w-3.5 h-3.5 mt-[1px]" />
                   </button>
               </div>
@@ -329,7 +449,7 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
                       <span className="text-gray-400 mx-1">/</span> <AnimatedAmount show={showBalances} amount="200 000" currency="FCFA" className="text-gray-400" hiddenText="••••" />
                   </div>
                   <div className="flex justify-center pt-3 border-t border-gray-50">
-                      <button className="text-[11px] text-gray-500 font-medium flex items-center">
+                      <button onClick={() => setSubScreen('objectifs')} className="text-[11px] text-gray-500 font-medium flex items-center">
                           Voir objectifs <ChevronRight className="w-3.5 h-3.5 mt-[1px]" />
                       </button>
                   </div>
@@ -398,7 +518,7 @@ function AccueilTab({ setActiveTab }: { setActiveTab: (tab: string) => void }) {
                   />
               </div>
 
-              <button className="text-[12px] text-gray-500 font-medium flex items-center justify-center w-full mt-4 pt-3.5 border-t border-gray-50">
+              <button onClick={() => setSubScreen('transactions')} className="text-[12px] text-gray-500 font-medium flex items-center justify-center w-full mt-4 pt-3.5 border-t border-gray-50">
                   Voir toutes les activités <ChevronRight className="w-4 h-4 ml-0.5" />
               </button>
           </div>
@@ -484,7 +604,7 @@ function AnalyseTab() {
   )
 }
 
-function FormationTab() {
+function FormationTab({ setModalLevel }: { setModalLevel: (m: string) => void }) {
   return (
     <main className="px-5 py-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
        <div className="relative">
@@ -496,53 +616,63 @@ function FormationTab() {
           <CourseCard 
             title="Gérer son argent comme un pro"
             time="5 min" category="Finance de base"
-            image="https://images.unsplash.com/photo-1579952363873-27f3bade9f55?q=80&w=300"
+            image="https://images.unsplash.com/photo-1543326168-5e82b78990be?q=80&w=300"
             progress={100}
+            onClick={() => setModalLevel('course')}
           />
           <CourseCard 
             title="Investir après sa carrière"
             time="12 min" category="Investissement"
-            image="https://images.unsplash.com/photo-1611095790444-1dfa35e37b52?q=80&w=300"
+            image="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=300"
             progress={30}
+            onClick={() => setModalLevel('course')}
           />
           <CourseCard 
             title="Préparer sa retraite sportive"
             time="8 min" category="Épargne"
-            image="https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?q=80&w=300"
+            image="https://images.unsplash.com/photo-1518605368461-1ee7e547f89d?q=80&w=300"
             progress={0}
+            onClick={() => setModalLevel('course')}
           />
           <CourseCard 
             title="Négocier ses contrats sponsors"
             time="15 min" category="Revenus"
-            image="https://images.unsplash.com/photo-1552664730-d307ca884978?q=80&w=300"
+            image="https://images.unsplash.com/photo-1580216639807-68b449102c92?q=80&w=300"
             progress={0}
+            onClick={() => setModalLevel('course')}
           />
        </div>
     </main>
   )
 }
 
-function ProfilTab() {
+function ProfilTab({ setModalLevel }: { setModalLevel: (m: string) => void }) {
   const [showSplitModal, setShowSplitModal] = useState(false);
   const [split, setSplit] = useState({ courant: 70, epargne: 20, retraite: 10 });
 
   return (
-    <main className="px-5 py-6 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div className="flex flex-col items-center bg-white p-6 rounded-[24px] shadow-sm shadow-gray-200/50">
-         <div className="relative mb-4">
-             <img src="https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?q=80&w=150" alt="Profile" className="w-24 h-24 rounded-full object-cover border-[3.5px] border-white shadow-md" />
-             <div className="absolute bottom-0 right-0 bg-[#36a655] w-7 h-7 rounded-full border-2 border-white flex items-center justify-center">
-                 <Shield className="w-3.5 h-3.5 text-white" fill="white" />
+    <main className="pb-8 space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+       <div className="relative">
+          <div className="h-[140px] w-full bg-cover bg-center -mt-6" style={{backgroundImage: 'url("https://images.unsplash.com/photo-1577741314755-048d8525d31e?q=80&w=600&auto=format&fit=crop")'}}>
+             <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/30"></div>
+          </div>
+          <div className="flex flex-col items-center bg-white mx-5 -mt-12 p-6 rounded-[24px] shadow-sm shadow-gray-200/50 relative z-10">
+             <div className="relative mb-4">
+                 <img src="https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?q=80&w=150" alt="Profile" className="w-24 h-24 rounded-full object-cover border-[3.5px] border-white shadow-md bg-white" />
+                 <div className="absolute bottom-0 right-0 bg-[#36a655] w-7 h-7 rounded-full border-2 border-white flex items-center justify-center">
+                     <Shield className="w-3.5 h-3.5 text-white" fill="white" />
+                 </div>
              </div>
-         </div>
-         <h2 className="text-xl font-bold text-gray-900 mb-1">Souraka M.</h2>
-         <p className="text-gray-500 text-[13px] font-medium mb-4">Attaquant • ASEC Mimosas</p>
-         <div className="bg-green-50 text-[#36a655] px-5 py-2 rounded-full text-[12px] font-bold border border-green-100 flex items-center gap-1.5 shadow-sm">
-            <Star className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" /> Compte Certifié PRO
-         </div>
-      </div>
-      
-      <div className="bg-white rounded-[20px] shadow-sm shadow-gray-200/50 overflow-hidden">
+             <h2 className="text-xl font-bold text-gray-900 mb-1">Souraka M.</h2>
+             <p className="text-gray-500 text-[13px] font-medium mb-4">Attaquant • ASEC Mimosas</p>
+             <div className="bg-green-50 text-[#36a655] px-5 py-2 rounded-full text-[12px] font-bold border border-green-100 flex items-center gap-1.5 shadow-sm">
+                <Star className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" /> Compte Certifié PRO
+             </div>
+          </div>
+       </div>
+
+       <div className="px-5 space-y-5">
+           <div className="bg-white rounded-[20px] shadow-sm shadow-gray-200/50 overflow-hidden">
         <div className="p-4 border-b border-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-50">
            <span className="font-bold text-gray-700 text-[13px]">Informations personnelles</span>
            <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -567,9 +697,16 @@ function ProfilTab() {
                <ChevronRight className="w-4 h-4 text-gray-400" />
            </div>
         </div>
+        <div onClick={() => setModalLevel('support')} className="p-4 border-b border-gray-50 flex items-center justify-between cursor-pointer hover:bg-gray-50">
+           <span className="font-bold text-gray-700 text-[13px]">Support Client</span>
+           <div className="flex items-center gap-2">
+               <ChevronRight className="w-4 h-4 text-gray-400" />
+           </div>
+        </div>
         <div className="p-4 flex items-center justify-between cursor-pointer hover:bg-red-50">
            <span className="font-bold text-red-500 text-[13px]">Déconnexion</span>
         </div>
+      </div>
       </div>
       
       {showSplitModal && <SplitAutoModal 
@@ -666,7 +803,7 @@ function SplitControl({ label, value, colorClass, onChange }: { label: string, v
 }
 
 function PayerTab() {
-  const [mode, setMode] = useState<'contact' | 'scanner' | 'mon_code'>('contact');
+  const [mode, setMode] = useState<'contact' | 'scanner' | 'mon_code'>('scanner');
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -729,16 +866,14 @@ function PayerTab() {
                     <h2 className="text-[18px] font-black text-gray-900">Souraka M.</h2>
                     <p className="text-gray-500 text-[12px] font-medium mb-6">Attaquant • ASEC Mimosas</p>
 
-                    <div className="w-48 h-48 bg-white rounded-[24px] shadow-sm shadow-gray-200/50 border border-gray-100 p-3 mb-6">
-                        <div className="w-full h-full bg-gray-900 rounded-[12px] flex items-center justify-center relative overflow-hidden">
-                            <div className="absolute inset-0 bg-white" style={{ clipPath: 'polygon(0% 0%, 10% 0%, 10% 10%, 0% 10%, 0% 20%, 20% 20%, 20% 0%, 30% 0%, 30% 30%, 0% 30%, 0% 40%, 40% 40%, 40% 0%, 50% 0%, 50% 50%, 0% 50%, 0% 60%, 60% 60%, 60% 0%, 70% 0%, 70% 70%, 0% 70%, 0% 80%, 80% 80%, 80% 0%, 90% 0%, 90% 90%, 0% 90%, 0% 100%, 100% 100%, 100% 0%)' }}></div>
-                            <div className="absolute inset-x-0 inset-y-0 opacity-20" style={{ background: 'repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 4px)' }}></div>
-                            <div className="absolute inset-x-0 inset-y-0 opacity-20" style={{ background: 'repeating-linear-gradient(-45deg, #000 0, #000 2px, transparent 2px, transparent 4px)' }}></div>
-                            <div className="absolute inset-3 border-[4px] border-gray-900 rounded-lg"></div>
-                            <div className="absolute inset-3 border-[4px] border-gray-900 rounded-lg bg-white" style={{ clipPath: 'inset(10% 10% 10% 10%)' }}></div>
-                            <div className="w-12 h-12 bg-white rounded-xl z-20 flex flex-col items-center justify-center shadow-md">
-                                <h1 className="text-gray-900 font-black text-[9px] tracking-tighter leading-none mb-0.5">GOAL</h1>
-                                <span className="text-[#36a655] font-black text-[7px] leading-none">FINANCE</span>
+                    <div className="w-48 h-48 bg-white rounded-[24px] shadow-sm shadow-gray-200/50 border border-gray-100 p-3 mb-6 flex items-center justify-center relative">
+                        <QRCode value="GFA-842-199" size={160} fgColor="#111827" />
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="bg-white p-1 rounded-lg shadow-sm">
+                                <div className="w-8 h-8 rounded-md flex flex-col items-center justify-center bg-[#f9fafb]">
+                                    <div className="text-gray-900 font-black text-[7px] tracking-tighter leading-none mb-0.5">GOAL</div>
+                                    <span className="text-[#36a655] font-black text-[5px] leading-none">FINANCE</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -782,9 +917,9 @@ function RecentContact({ name, role, id, img }: any) {
     )
 }
 
-function CourseCard({ title, time, category, image, progress }: any) {
+function CourseCard({ title, time, category, image, progress, onClick }: any) {
     return (
-        <div className="bg-white p-2.5 rounded-[16px] shadow-sm shadow-gray-200/50 flex gap-4 cursor-pointer hover:shadow-md transition-shadow">
+        <div onClick={onClick} className="bg-white p-2.5 rounded-[16px] shadow-sm shadow-gray-200/50 flex gap-4 cursor-pointer hover:shadow-md transition-shadow">
             <div className="w-[100px] h-[80px] rounded-xl overflow-hidden relative flex-shrink-0 group">
                 <img src={image} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" alt="Course" />
                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
